@@ -10,6 +10,8 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 
 // ==================== 数据定义 ====================
 
+const token = ref('')
+
 // 员工搜索条件数据
 const empSearchInfo = ref({
   name: '',
@@ -51,7 +53,7 @@ const empInfo = ref({
   deptId: '',        // 所属部门ID
   entryDate: '',     // 入职日期
   image: '',         // 头像URL
-  workExperiences: [] // 工作经历数组
+  exprList: [] // 工作经历数组
 })
 
 // 性别选项数据
@@ -111,10 +113,10 @@ watch(() => empSearchInfo.value.date, (newVal, oldVal) => {
 })
 
 // 监听工作经历变化，同步日期数据
-watch(() => empInfo.value.workExperiences, (newVal, oldVal) => {
-  if (empInfo.value.workExperiences &&
-    empInfo.value.workExperiences.length > 0) {
-    empInfo.value.workExperiences.forEach(exper => {
+watch(() => empInfo.value.exprList, (newVal, oldVal) => {
+  if (empInfo.value.exprList &&
+    empInfo.value.exprList.length > 0) {
+    empInfo.value.exprList.forEach(exper => {
       if (exper.experDate && exper.experDate.length == 2) {
         exper.begin = exper.experDate[0]
         exper.end = exper.experDate[1]
@@ -124,7 +126,7 @@ watch(() => empInfo.value.workExperiences, (newVal, oldVal) => {
       }
     })
   }
-  console.log(empInfo.value.workExperiences)
+  console.log(empInfo.value.exprList)
 }, { deep: true })
 
 // ==================== 生命周期钩子 ====================
@@ -139,6 +141,7 @@ onMounted(async () => {
   } else {
     ElMessage.error(result.message)
   }
+  getToken()
 })
 
 // ==================== 搜索相关方法 ====================
@@ -211,7 +214,7 @@ const clearFromData = () => {
     deptId: '',        // 所属部门ID
     entryDate: '',     // 入职日期
     image: '',         // 头像URL
-    workExperiences: [] // 工作经历数组
+    exprList: [] // 工作经历数组
   }
 }
 
@@ -223,7 +226,7 @@ const clearFromValidate = () => {
 
 // 添加工作经历
 const addEmpExper = () => {
-  empInfo.value.workExperiences.push({
+  empInfo.value.exprList.push({
     begin: '',
     end: '',
     company: '',
@@ -234,7 +237,14 @@ const addEmpExper = () => {
 
 // 删除工作经历
 const deleteExper = (index) => {
-  empInfo.value.workExperiences.splice(index, 1)
+  empInfo.value.exprList.splice(index, 1)
+}
+
+const getToken = () => {
+  const userInfo = JSON.parse(localStorage.getItem('userInfo'))
+  if (userInfo && userInfo.token) {
+    token.value = userInfo.token
+  }
 }
 
 // ==================== 图片上传相关方法 ====================
@@ -285,7 +295,7 @@ const saveEmp = async () => {
 const queryEmpById = async (id) => {
   const result = await queryReturnApi(id)
   if (result.code) {
-    const empWorkExperiences = (result.data.exprList || []).map(
+    const empexprList = (result.data.exprList || []).map(
       exper => ({
         ...exper,
         experDate: [exper.begin, exper.end]
@@ -293,7 +303,7 @@ const queryEmpById = async (id) => {
     )
     empInfo.value = {
       ...result.data,
-      workExperiences: empWorkExperiences
+      exprList: empexprList
     }
   } else {
     ElMessage.error(result.message)
@@ -375,7 +385,7 @@ const deleteEmpByIds = () => {
       <el-form-item label="姓名">
         <el-input v-model="empSearchInfo.name" placeholder="请输入员工姓名" clearable />
       </el-form-item>
-      
+
       <!-- 性别筛选下拉框 -->
       <el-form-item label="性别">
         <el-select v-model="empSearchInfo.gender" placeholder="请选择" clearable>
@@ -383,24 +393,17 @@ const deleteEmpByIds = () => {
           <el-option label="女" value="2" />
         </el-select>
       </el-form-item>
-      
+
       <!-- 入职日期范围选择器 -->
       <el-form-item>
         <div class="block">
           <span class="demonstration" style="margin-right: 20px;color: #606266;">入职日期</span>
-          <el-date-picker 
-            v-model="empSearchInfo.date" 
-            type="daterange" 
-            range-separator="到" 
-            start-placeholder="开始日期"
-            end-placeholder="结束日期" 
-            :size="small" 
-            value 
-            value-format="YYYY-MM-DD">
+          <el-date-picker v-model="empSearchInfo.date" type="daterange" range-separator="到" start-placeholder="开始日期"
+            end-placeholder="结束日期" :size="small" value value-format="YYYY-MM-DD">
           </el-date-picker>
         </div>
       </el-form-item>
-      
+
       <!-- 操作按钮 -->
       <el-form-item>
         <el-button type="primary" @click="searchEmp">查询</el-button>
@@ -417,91 +420,49 @@ const deleteEmpByIds = () => {
 
   <!-- 员工表格展示区域 -->
   <div class="container">
-    <el-table 
-      :data="empList" 
-      border 
-      style="width: 100%" 
-      @selection-change="handleSelectionChange">
-      
+    <el-table :data="empList" border style="width: 100%" @selection-change="handleSelectionChange">
+
       <!-- 多选框列 -->
-      <el-table-column 
-        prop="date" 
-        type="selection" 
-        label="" 
-        width="70" 
-        align="center" />
-      
+      <el-table-column prop="date" type="selection" label="" width="70" align="center" />
+
       <!-- 姓名列 -->
-      <el-table-column 
-        prop="name" 
-        label="姓名" 
-        width="100" 
-        align="center" />
-      
+      <el-table-column prop="name" label="姓名" width="100" align="center" />
+
       <!-- 性别列 -->
-      <el-table-column 
-        label="性别" 
-        width="70" 
-        align="center">
+      <el-table-column label="性别" width="70" align="center">
         <template #default="scope">
           {{ scope.row.gender == 1 ? '男' : '女' }}
         </template>
       </el-table-column>
-      
+
       <!-- 头像列 -->
-      <el-table-column 
-        label="头像" 
-        width="100" 
-        align="center">
+      <el-table-column label="头像" width="100" align="center">
         <template #default="scope">
           <img :src="scope.row.image" height="30px">
         </template>
       </el-table-column>
-      
+
       <!-- 所属部门列 -->
-      <el-table-column 
-        prop="deptName" 
-        label="所属部门" 
-        width="100" 
-        align="center" />
-      
+      <el-table-column prop="deptName" label="所属部门" width="100" align="center" />
+
       <!-- 职位列 -->
-      <el-table-column 
-        label="职位" 
-        width="90" 
-        align="center">
+      <el-table-column label="职位" width="90" align="center">
         <template #default="scope">
           {{ jobMap[scope.row.job] || '其他' }}
         </template>
       </el-table-column>
-      
+
       <!-- 入职日期列 -->
-      <el-table-column 
-        prop="entryDate" 
-        label="入职日期" 
-        width="130" 
-        align="center" />
-      
+      <el-table-column prop="entryDate" label="入职日期" width="130" align="center" />
+
       <!-- 最后操作时间列 -->
-      <el-table-column 
-        prop="updateTime" 
-        label="最后操作时间" 
-        width="180" 
-        align="center" />
-      
+      <el-table-column prop="updateTime" label="最后操作时间" width="180" align="center" />
+
       <!-- 操作列 -->
-      <el-table-column 
-        label="操作" 
-        align="center">
+      <el-table-column label="操作" align="center">
         <template #default="scope">
-          <el-button 
-            type="primary" 
-            size="mini" 
-            @click="editEmp(scope.row.id)">编辑</el-button>
-          <el-button 
-            type="danger" 
-            size="mini" 
-            @click="deleteEmp(scope.row.id)">删除</el-button>
+          <el-button type="primary" size="mini" @click="editEmp(scope.row.id)">编辑</el-button>
+          <el-button type="danger" size="mini" @click="deleteEmp(scope.row.id)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -509,32 +470,22 @@ const deleteEmpByIds = () => {
 
   <!-- 新增/编辑员工对话框 -->
   <div>
-    <el-dialog 
-      v-model="dialogVisible" 
-      :title="dialogTitle">
-      
-      <el-form 
-        :model="empInfo" 
-        label-width="80px" 
-        :rules="empFormRules" 
-        ref="empFromRef">
-        
+    <el-dialog v-model="dialogVisible" :title="dialogTitle">
+
+      <el-form :model="empInfo" label-width="80px" :rules="empFormRules" ref="empFromRef">
+
         <!-- 基本信息 -->
         <!-- 第一行：用户名和姓名 -->
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="用户名" prop="username">
-              <el-input 
-                v-model="empInfo.username" 
-                placeholder="请输入员工用户名，2-20个字" />
+              <el-input v-model="empInfo.username" placeholder="请输入员工用户名，2-20个字" />
             </el-form-item>
           </el-col>
 
           <el-col :span="12">
             <el-form-item label="姓名" prop="name">
-              <el-input 
-                v-model="empInfo.name" 
-                placeholder="请输入员工姓名，2-10个字" />
+              <el-input v-model="empInfo.name" placeholder="请输入员工姓名，2-10个字" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -543,24 +494,15 @@ const deleteEmpByIds = () => {
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="性别" prop="gender">
-              <el-select 
-                v-model="empInfo.gender" 
-                placeholder="请选择性别" 
-                style="width: 100%;">
-                <el-option 
-                  v-for="gender in genders" 
-                  :key="gender.name" 
-                  :label="gender.name"
-                  :value="gender.value" />
+              <el-select v-model="empInfo.gender" placeholder="请选择性别" style="width: 100%;">
+                <el-option v-for="gender in genders" :key="gender.name" :label="gender.name" :value="gender.value" />
               </el-select>
             </el-form-item>
           </el-col>
 
           <el-col :span="12">
             <el-form-item label="手机号" prop="phone">
-              <el-input 
-                v-model="empInfo.phone" 
-                placeholder="请输入员工手机号" />
+              <el-input v-model="empInfo.phone" placeholder="请输入员工手机号" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -569,24 +511,15 @@ const deleteEmpByIds = () => {
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="职位">
-              <el-select 
-                v-model="empInfo.job" 
-                placeholder="请选择职位" 
-                style="width: 100%;">
-                <el-option 
-                  v-for="job in jobs" 
-                  :key="job.name" 
-                  :label="job.name" 
-                  :value="job.value" />
+              <el-select v-model="empInfo.job" placeholder="请选择职位" style="width: 100%;">
+                <el-option v-for="job in jobs" :key="job.name" :label="job.name" :value="job.value" />
               </el-select>
             </el-form-item>
           </el-col>
-          
+
           <el-col :span="12">
             <el-form-item label="薪资">
-              <el-input 
-                v-model="empInfo.salary" 
-                placeholder="请输入员工薪资" />
+              <el-input v-model="empInfo.salary" placeholder="请输入员工薪资" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -595,28 +528,16 @@ const deleteEmpByIds = () => {
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="所属部门">
-              <el-select 
-                v-model="empInfo.deptId" 
-                placeholder="请选择部门" 
-                style="width: 100%;">
-                <el-option 
-                  v-for="dept in deptList" 
-                  :key="dept.id" 
-                  :label="dept.name" 
-                  :value="dept.id" />
+              <el-select v-model="empInfo.deptId" placeholder="请选择部门" style="width: 100%;">
+                <el-option v-for="dept in deptList" :key="dept.id" :label="dept.name" :value="dept.id" />
               </el-select>
             </el-form-item>
           </el-col>
-          
+
           <el-col :span="12">
             <el-form-item label="入职日期">
-              <el-date-picker 
-                v-model="empInfo.entryDate" 
-                type="date" 
-                style="width: 100%;" 
-                placeholder="选择日期"
-                format="YYYY-MM-DD" 
-                value-format="YYYY-MM-DD" />
+              <el-date-picker v-model="empInfo.entryDate" type="date" style="width: 100%;" placeholder="选择日期"
+                format="YYYY-MM-DD" value-format="YYYY-MM-DD" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -625,17 +546,10 @@ const deleteEmpByIds = () => {
         <el-row :gutter="20">
           <el-col :span="24">
             <el-form-item label="头像">
-              <el-upload 
-                class="avatar-uploader" 
-                action="/api/upload" 
-                :show-file-list="false"
-                :on-success="handleAvatarSuccess" 
+              <el-upload class="avatar-uploader" action="/api/upload" :show-file-list="false"
+                :on-success="handleAvatarSuccess" :headers="{'token':token}"
                 :before-upload="beforeAvatarUpload">
-                <img 
-                  v-if="empInfo.image" 
-                  :src="empInfo.image" 
-                  class="avatar" 
-                  height="56px" />
+                <img v-if="empInfo.image" :src="empInfo.image" class="avatar" height="56px" />
                 <el-icon v-else class="avatar-uploader-icon">
                   <Plus />
                 </el-icon>
@@ -649,69 +563,40 @@ const deleteEmpByIds = () => {
         <el-row :gutter="10">
           <el-col :span="24">
             <el-form-item label="工作经历">
-              <el-button 
-                type="success" 
-                size="small" 
-                @click="addEmpExper">+ 添加工作经历</el-button>
+              <el-button type="success" size="small" @click="addEmpExper">+ 添加工作经历</el-button>
             </el-form-item>
           </el-col>
         </el-row>
 
         <!-- 工作经历列表 -->
-        <el-row 
-          :gutter="3" 
-          v-for="(exper, index) in empInfo.workExperiences" 
-          :key="index">
-          
+        <el-row :gutter="3" v-for="(exper, index) in empInfo.exprList" :key="index">
+
           <!-- 时间范围选择 -->
           <el-col :span="10">
-            <el-form-item 
-              size="small" 
-              label="时间" 
-              label-width="80px">
-              <el-date-picker 
-                type="daterange" 
-                v-model="exper.experDate" 
-                range-separator="至" 
-                start-placeholder="开始日期"
-                end-placeholder="结束日期" 
-                format="YYYY-MM-DD" 
-                value-format="YYYY-MM-DD" />
+            <el-form-item size="small" label="时间" label-width="80px">
+              <el-date-picker type="daterange" v-model="exper.experDate" range-separator="至" start-placeholder="开始日期"
+                end-placeholder="结束日期" format="YYYY-MM-DD" value-format="YYYY-MM-DD" />
             </el-form-item>
           </el-col>
 
           <!-- 公司名称输入 -->
           <el-col :span="6">
-            <el-form-item 
-              size="small" 
-              label="公司" 
-              label-width="60px">
-              <el-input 
-                placeholder="请输入公司名称" 
-                v-model="exper.company" />
+            <el-form-item size="small" label="公司" label-width="60px">
+              <el-input placeholder="请输入公司名称" v-model="exper.company" />
             </el-form-item>
           </el-col>
 
           <!-- 职位输入 -->
           <el-col :span="6">
-            <el-form-item 
-              size="small" 
-              label="职位" 
-              label-width="60px">
-              <el-input 
-                placeholder="请输入职位" 
-                v-model="exper.job" />
+            <el-form-item size="small" label="职位" label-width="60px">
+              <el-input placeholder="请输入职位" v-model="exper.job" />
             </el-form-item>
           </el-col>
 
           <!-- 删除按钮 -->
           <el-col :span="2">
-            <el-form-item 
-              size="small" 
-              label-width="0px">
-              <el-button 
-                type="danger" 
-                @click="deleteExper(index)">- 删除</el-button>
+            <el-form-item size="small" label-width="0px">
+              <el-button type="danger" @click="deleteExper(index)">- 删除</el-button>
             </el-form-item>
           </el-col>
         </el-row>
@@ -721,9 +606,7 @@ const deleteEmpByIds = () => {
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="dialogVisible = false">取消</el-button>
-          <el-button 
-            type="primary" 
-            @click="saveEmp">保存</el-button>
+          <el-button type="primary" @click="saveEmp">保存</el-button>
         </span>
       </template>
     </el-dialog>
@@ -731,17 +614,9 @@ const deleteEmpByIds = () => {
 
   <!-- 分页组件 -->
   <div class="container">
-    <el-pagination 
-      v-model:current-page="currentPage" 
-      v-model:page-size="pageSize" 
-      :page-sizes="[5, 10, 20, 30, 40]"
-      :size="size" 
-      :disabled="disabled" 
-      :background="background" 
-      layout="total, sizes, prev, pager, next, jumper"
-      :total="total" 
-      @size-change="handleSizeChange" 
-      @current-change="handleCurrentChange" />
+    <el-pagination v-model:current-page="currentPage" v-model:page-size="pageSize" :page-sizes="[5, 10, 20, 30, 40]"
+      :size="size" :disabled="disabled" :background="background" layout="total, sizes, prev, pager, next, jumper"
+      :total="total" @size-change="handleSizeChange" @current-change="handleCurrentChange" />
   </div>
 </template>
 
